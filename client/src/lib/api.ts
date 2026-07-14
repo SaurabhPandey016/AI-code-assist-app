@@ -1,9 +1,11 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+import { getAccessToken } from './auth';
 
 export async function createChat() {
   const response = await fetch(`${API_BASE_URL}/api/chats`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}) },
+    credentials: 'include',
   });
 
   if (!response.ok) {
@@ -14,7 +16,7 @@ export async function createChat() {
 }
 
 export async function listChats() {
-  const response = await fetch(`${API_BASE_URL}/api/chats`);
+  const response = await fetch(`${API_BASE_URL}/api/chats`, { headers: { ...(getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}) }, credentials: 'include' });
   if (!response.ok) {
     throw new Error('Unable to load chat history.');
   }
@@ -22,10 +24,44 @@ export async function listChats() {
 }
 
 export async function fetchChatMessages(chatId: string) {
-  const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}/messages`);
+  const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}/messages`, { headers: { ...(getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}) }, credentials: 'include' });
   if (!response.ok) {
     throw new Error('Unable to load chat messages.');
   }
+  return response.json();
+}
+
+export async function editChatTitle(chatId: string, title: string) {
+  const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}),
+    },
+    credentials: 'include',
+    body: JSON.stringify({ title }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || 'Unable to rename chat.');
+  }
+
+  return response.json();
+}
+
+export async function deleteChat(chatId: string) {
+  const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}`, {
+    method: 'DELETE',
+    headers: { ...(getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}) },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || 'Unable to delete chat.');
+  }
+
   return response.json();
 }
 
@@ -40,6 +76,8 @@ export async function postChatMessage(payload: { chatId: string; content?: strin
   const response = await fetch(`${API_BASE_URL}/api/chats/${payload.chatId}/messages`, {
     method: 'POST',
     body: formData,
+    headers: { ...(getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}) },
+    credentials: 'include',
   });
 
   if (!response.ok) {

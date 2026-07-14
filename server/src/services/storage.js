@@ -18,11 +18,12 @@ async function uploadToSupabase({ file, bucketName = process.env.SUPABASE_BUCKET
 
   const extension = file.originalname.split('.').pop() || 'txt';
   const storedName = `${randomUUID()}.${extension}`;
-  const arrayBuffer = await file.arrayBuffer();
-  const fileBuffer = Buffer.from(arrayBuffer);
+
+  // Support both browser File-like objects and multer's buffer
+  const fileBuffer = file.buffer ? file.buffer : Buffer.from(await (file.arrayBuffer ? file.arrayBuffer() : Buffer.from('')));
 
   const { error } = await supabase.storage.from(bucketName).upload(storedName, fileBuffer, {
-    contentType: file.mimetype,
+    contentType: file.mimetype || 'application/octet-stream',
     cacheControl: '3600',
     upsert: false,
   });

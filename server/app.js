@@ -2,6 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import chatRoutes from './src/routes/chat.js';
+import authRoutes from './src/routes/auth.js';
+import { requireAuth } from './src/middleware/auth.js';
+import cookieParser from 'cookie-parser';
 import errorHandler from './src/middleware/errorHandler.js';
 
 dotenv.config();
@@ -13,11 +16,15 @@ app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000', creden
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use('/api', chatRoutes);
+app.use(cookieParser());
+app.use('/api', authRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.status(200).json({ message: 'Server is healthy' });
 });
+
+// Protect chat routes - require a valid access token
+app.use('/api', requireAuth, chatRoutes);
 
 app.use(errorHandler);
 
