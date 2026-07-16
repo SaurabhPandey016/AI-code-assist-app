@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { getAccessToken, logout as clientLogout, me } from '../../lib/auth';
+import { logout as clientLogout, me } from '../../lib/auth';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<{ id: string; email: string; name?: string } | null>(null);
@@ -10,9 +10,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const token = getAccessToken();
-        if (!token) return setUser(null);
-        const info = await me(token);
+        const info = await me();
         setUser(info || null);
       } catch (e) {
         setUser(null);

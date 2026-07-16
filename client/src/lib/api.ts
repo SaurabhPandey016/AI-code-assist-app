@@ -1,10 +1,9 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-import { getAccessToken } from './auth';
 
 export async function createChat() {
   const response = await fetch(`${API_BASE_URL}/api/chats`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}) },
+    headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
   });
 
@@ -16,7 +15,7 @@ export async function createChat() {
 }
 
 export async function listChats() {
-  const response = await fetch(`${API_BASE_URL}/api/chats`, { headers: { ...(getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}) }, credentials: 'include' });
+  const response = await fetch(`${API_BASE_URL}/api/chats`, { credentials: 'include' });
   if (!response.ok) {
     throw new Error('Unable to load chat history.');
   }
@@ -24,7 +23,7 @@ export async function listChats() {
 }
 
 export async function fetchChatMessages(chatId: string) {
-  const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}/messages`, { headers: { ...(getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}) }, credentials: 'include' });
+  const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}/messages`, { credentials: 'include' });
   if (!response.ok) {
     throw new Error('Unable to load chat messages.');
   }
@@ -36,7 +35,6 @@ export async function editChatTitle(chatId: string, title: string) {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
-      ...(getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}),
     },
     credentials: 'include',
     body: JSON.stringify({ title }),
@@ -53,7 +51,6 @@ export async function editChatTitle(chatId: string, title: string) {
 export async function deleteChat(chatId: string) {
   const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}`, {
     method: 'DELETE',
-    headers: { ...(getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}) },
     credentials: 'include',
   });
 
@@ -76,7 +73,6 @@ export async function postChatMessage(payload: { chatId: string; content?: strin
   const response = await fetch(`${API_BASE_URL}/api/chats/${payload.chatId}/messages`, {
     method: 'POST',
     body: formData,
-    headers: { ...(getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}) },
     credentials: 'include',
   });
 

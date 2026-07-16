@@ -1,21 +1,18 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-export function setAccessToken(token: string | null) {
-  if (token) localStorage.setItem('accessToken', token);
-  else localStorage.removeItem('accessToken');
-}
-
-export function getAccessToken() {
-  return typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-}
-
 export async function register(payload: { name?: string; email: string; password: string }) {
   const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+    credentials: 'include',
   });
-  if (!res.ok) throw new Error(await res.text());
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(errorText || 'Registration failed.');
+  }
+
   return res.json();
 }
 
@@ -26,10 +23,13 @@ export async function login(payload: { email: string; password: string }) {
     body: JSON.stringify(payload),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error(await res.text());
-  const data = await res.json();
-  if (data.accessToken) setAccessToken(data.accessToken);
-  return data;
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(errorText || 'Login failed.');
+  }
+
+  return res.json();
 }
 
 export async function logout() {
@@ -38,13 +38,10 @@ export async function logout() {
   } catch (e) {
     // ignore
   }
-  setAccessToken(null);
 }
 
-export async function me(token?: string) {
-  const t = token || getAccessToken();
-  if (!t) return null;
-  const res = await fetch(`${API_BASE_URL}/api/auth/me`, { headers: { Authorization: `Bearer ${t}` } });
+export async function me() {
+  const res = await fetch(`${API_BASE_URL}/api/auth/me`, { credentials: 'include' });
   if (!res.ok) return null;
   return res.json();
 }
@@ -54,6 +51,4 @@ export default {
   login,
   logout,
   me,
-  getAccessToken,
-  setAccessToken,
 };

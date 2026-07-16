@@ -39,6 +39,26 @@ router.post('/chats', async (req, res) => {
   }
 });
 
+router.get('/chats/:chatId/messages', async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const chat = await findChatById(chatId);
+    if (!chat) {
+      return res.status(404).json({ message: 'Chat not found.' });
+    }
+
+    if (chat.userId && chat.userId !== req.user?.id) {
+      return res.status(403).json({ message: 'You do not have permission to access this chat.' });
+    }
+
+    const messages = await getMessagesByChat(chatId);
+    return res.json(messages);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Failed to load chat messages.' });
+  }
+});
+
 router.post('/chats/:chatId/messages', upload.single('file'), async (req, res) => {
   try {
     const { chatId } = req.params;

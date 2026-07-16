@@ -36,6 +36,10 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [renameLoading, setRenameLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -61,7 +65,32 @@ export default function DashboardPage() {
     });
   }, [router]);
 
+  const filteredChats = useMemo(() => {
+    if (!searchTerm.trim()) return chats;
+    return chats.filter((chat) => chat.title.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [chats, searchTerm]);
+
   const activeChat = useMemo(() => chats.find((chat) => chat.id === activeChatId), [chats, activeChatId]);
+
+  const latestAssistantMessage = useMemo(
+    () => [...messages].reverse().find((message) => message.role === 'assistant') ?? null,
+    [messages]
+  );
+
+  const reviewPoints = useMemo(() => {
+    if (!latestAssistantMessage?.content) return 0;
+    const bullets = latestAssistantMessage.content
+      .split(/\r?\n/)
+      .filter((line) => line.trim().startsWith('-') && line.trim().length > 3);
+    if (bullets.length > 0) {
+      return Math.min(100, bullets.length * 15);
+    }
+
+    const sentences = latestAssistantMessage.content.split(/[.!?]/).filter((part) => part.trim().length > 10);
+    return Math.min(100, Math.max(10, sentences.length * 12));
+  }, [latestAssistantMessage]);
+
+  const reviewSummary = latestAssistantMessage?.content || 'Submit a review to see detailed assistant feedback here.';
 
   const handleStartNewChat = async () => {
     try {
@@ -84,19 +113,28 @@ export default function DashboardPage() {
     const title = window.prompt('Enter a new chat title:', activeChat.title);
     if (!title) return;
 
+    setRenameLoading(true);
+    setActionMessage('Renaming chat...');
+
     try {
       const updated = await editChatTitle(activeChat.id, title.trim());
       setChats((current) => current.map((chat) => (chat.id === updated.id ? updated : chat)));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to rename the chat.');
+    } finally {
+      setRenameLoading(false);
+      setActionMessage(null);
     }
   };
 
   const handleDeleteChat = async () => {
     if (!activeChatId) return;
-    const confirm = window.confirm('Delete this chat? This action cannot be undone.');
-    if (!confirm) return;
+    const confirmDelete = window.confirm('Delete this chat? This action cannot be undone.');
+    if (!confirmDelete) return;
+
+    setDeleteLoading(true);
+    setActionMessage('Deleting chat...');
 
     try {
       await deleteChat(activeChatId);
@@ -116,18 +154,33 @@ export default function DashboardPage() {
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to delete the chat.');
+    } finally {
+      setDeleteLoading(false);
+      setActionMessage(null);
     }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!activeChatId) return;
+    if (!prompt.trim() && !code.trim() && !selectedFile) {
+      setError('Please paste code, upload a file, or add a prompt before reviewing.');
+      return;
+    }
 
     setLoading(true);
     setError(null);
+    setActionMessage('Sending review request...');
 
     try {
-      const response = await postChatMessage({ chatId: activeChatId, content: prompt, code, file: selectedFile });
+      let chatId = activeChatId ?? '';
+      if (!chatId) {
+        const newChat = await createChat();
+        setChats((current) => [newChat, ...current]);
+        setActiveChatId(newChat.id);
+        chatId = newChat.id;
+      }
+
+      const response = await postChatMessage({ chatId, content: prompt, code, file: selectedFile });
       setMessages(response.messages || []);
       setChats((current) => {
         const existing = current.find((chat) => chat.id === response.chat.id);
@@ -135,11 +188,15 @@ export default function DashboardPage() {
         return [response.chat, ...current];
       });
       setSelectedFile(null);
+      setPrompt('');
       if (fileInputRef.current) fileInputRef.current.value = '';
+      setActionMessage('Review complete.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to submit the review.');
+      setActionMessage('Review failed.');
     } finally {
       setLoading(false);
+      window.setTimeout(() => setActionMessage(null), 2500);
     }
   };
 
@@ -157,34 +214,50 @@ export default function DashboardPage() {
     <AppShell>
       <div className="grid gap-6 xl:grid-cols-[300px_1fr]">
         <aside className="rounded-[2rem] border border-white/10 bg-slate-900/75 p-5 shadow-2xl shadow-cyan-950/30 backdrop-blur-xl">
-          <div className="mb-6 flex items-center justify-between gap-4">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.35em] text-cyan-300">Workspace</p>
               <h2 className="mt-2 text-2xl font-semibold text-white">{userName ? `${userName}'s chats` : 'Your chats'}</h2>
             </div>
-            <button onClick={handleStartNewChat} className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-sm text-cyan-200 transition hover:bg-cyan-500/15">
+            <button onClick={handleStartNewChat} className="cursor-pointer rounded-full border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-sm text-cyan-200 transition hover:bg-cyan-500/15">
               New chat
             </button>
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="chat-search" className="sr-only">Search chats</label>
+            <input
+              id="chat-search"
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search chats..."
+              className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400/30"
+            />
           </div>
 
           <div className="space-y-3">
             {chats.length === 0 ? (
               <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-4 text-sm text-slate-300">No chats yet. Create one to start reviewing code.</div>
             ) : (
-              chats.map((chat) => (
-                <button
-                  key={chat.id}
-                  onClick={async () => {
-                    setActiveChatId(chat.id);
-                    const chatMessages = await fetchChatMessages(chat.id);
-                    setMessages(chatMessages);
-                  }}
-                  className={`w-full rounded-3xl border px-4 py-4 text-left transition ${activeChatId === chat.id ? 'border-cyan-400/30 bg-cyan-500/10 text-white' : 'border-white/10 bg-slate-950/60 text-slate-300 hover:border-slate-200/20 hover:bg-slate-800/75'}`}
-                >
-                  <p className="font-semibold">{chat.title}</p>
-                  <p className="mt-2 text-xs text-slate-400">{new Date(chat.createdAt).toLocaleString()}</p>
-                </button>
-              ))
+              filteredChats.length === 0 ? (
+                <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-4 text-sm text-slate-300">No chats match your search. Try a different keyword or create a new chat.</div>
+              ) : (
+                filteredChats.map((chat) => (
+                  <button
+                    key={chat.id}
+                    onClick={async () => {
+                      setActiveChatId(chat.id);
+                      const chatMessages = await fetchChatMessages(chat.id);
+                      setMessages(chatMessages);
+                    }}
+                    className={`cursor-pointer w-full rounded-3xl border px-4 py-4 text-left transition ${activeChatId === chat.id ? 'border-cyan-400/30 bg-cyan-500/10 text-white' : 'border-white/10 bg-slate-950/60 text-slate-300 hover:border-slate-200/20 hover:bg-slate-800/75'}`}
+                  >
+                    <p className="font-semibold">{chat.title}</p>
+                    <p className="mt-2 text-xs text-slate-400">{new Date(chat.createdAt).toLocaleString()}</p>
+                  </button>
+                ))
+              )
             )}
           </div>
         </aside>
@@ -200,18 +273,18 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={handleRenameChat}
-                disabled={!activeChat}
-                className="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-2 text-sm text-slate-200 transition hover:bg-slate-800/90 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!activeChat || renameLoading}
+                className="cursor-pointer rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-2 text-sm text-slate-200 transition hover:bg-slate-800/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Rename chat
+                {renameLoading ? 'Renaming…' : 'Rename chat'}
               </button>
               <button
                 type="button"
                 onClick={handleDeleteChat}
-                disabled={!activeChat}
-                className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-2 text-sm text-rose-200 transition hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!activeChat || deleteLoading}
+                className="cursor-pointer rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-2 text-sm text-rose-200 transition hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Delete chat
+                {deleteLoading ? 'Deleting…' : 'Delete chat'}
               </button>
               <div className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">Realtime code feedback</div>
             </div>
@@ -224,14 +297,14 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200 transition hover:bg-white/10"
+                    className="cursor-pointer inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200 transition hover:bg-white/10"
                   >
                     Upload file
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-400 via-indigo-500 to-violet-500 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-70"
+                    className="cursor-pointer inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-400 via-indigo-500 to-violet-500 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {loading ? 'Reviewing…' : 'Review code'}
                   </button>
@@ -260,6 +333,7 @@ export default function DashboardPage() {
                 </div>
               </form>
 
+              {actionMessage ? <div className="rounded-3xl border border-cyan-400/20 bg-cyan-500/10 p-4 text-sm text-cyan-100">{actionMessage}</div> : null}
               {error ? <div className="rounded-3xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200">{error}</div> : null}
             </div>
 
@@ -269,18 +343,54 @@ export default function DashboardPage() {
                 <p className="mt-3 text-sm text-slate-400">Use the code editor above to paste full files or snippets. Upload a file if you want the assistant to analyze an actual source file.</p>
               </div>
               <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-4">
-                <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">Chat response</p>
-                <p className="mt-3 text-sm text-slate-400">The assistant responds below based on your current prompt and code state.</p>
+                <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">Review details</p>
+                <div className="mt-3 grid gap-3">
+                  <div className="rounded-3xl bg-slate-950/80 p-4 text-sm text-slate-100">
+                    <p className="font-semibold text-slate-100">Latest assistant review</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-300">{reviewSummary}</p>
+                  </div>
+                  <div className="rounded-3xl bg-slate-950/80 p-4 text-sm text-slate-100">
+                    <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Review score</p>
+                    <div className="mt-3 flex items-end justify-between gap-3">
+                      <span className="text-4xl font-semibold text-cyan-300">{reviewPoints}</span>
+                      <span className="rounded-full bg-slate-900/80 px-3 py-1 text-xs uppercase tracking-[0.28em] text-slate-400">Score out of 100</span>
+                    </div>
+                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
+                      <div className="h-full rounded-full bg-cyan-400" style={{ width: `${reviewPoints}%` }} />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-3xl bg-slate-950/80 p-4 text-sm text-slate-100">
+                      <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Messages in chat</p>
+                      <p className="mt-3 text-3xl font-semibold text-slate-300">{messages.length}</p>
+                    </div>
+                    <div className="rounded-3xl bg-slate-950/80 p-4 text-sm text-slate-100">
+                      <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Active chat</p>
+                      <p className="mt-3 text-lg font-semibold text-slate-200">{activeChat?.title || 'No chat selected'}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </aside>
           </div>
 
           <div className="space-y-4">
             {messages.map((message) => (
-              <div key={message.id} className={`rounded-[1.75rem] border p-5 transition ${message.role === 'user' ? 'border-cyan-400/20 bg-cyan-500/10' : 'border-white/10 bg-slate-950/80'}`}>
-                <p className="mb-3 text-xs uppercase tracking-[0.3em] text-slate-400">{message.role === 'user' ? 'You' : 'Assistant'}</p>
-                <p className="whitespace-pre-wrap text-sm leading-6 text-slate-100">{message.content}</p>
-                {message.code ? <pre className="mt-4 overflow-x-auto rounded-3xl bg-slate-900/90 p-4 text-xs text-slate-300">{message.code}</pre> : null}
+              <div key={message.id} className={`w-full rounded-[1.75rem] border p-5 transition ${message.role === 'user' ? 'border-cyan-400/20 bg-cyan-500/10' : 'border-white/10 bg-slate-950/80'}`}>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{message.role === 'user' ? 'You' : 'Assistant'}</p>
+                  <span className="rounded-full bg-slate-900/70 px-3 py-1 text-[11px] uppercase tracking-[0.3em] text-slate-500">{message.role === 'user' ? 'Prompt' : 'Response'}</span>
+                </div>
+                <div className="w-full max-w-full overflow-hidden rounded-3xl border border-white/5 bg-slate-900/90 p-4">
+                  <div className="max-w-[90ch] whitespace-pre-wrap break-words text-sm leading-7 text-slate-100">
+                    {message.content}
+                  </div>
+                </div>
+                {message.code ? (
+                  <pre className="mt-4 w-full max-w-full overflow-x-auto rounded-3xl bg-slate-900/90 p-4 text-xs leading-6 text-slate-300">
+                    {message.code}
+                  </pre>
+                ) : null}
               </div>
             ))}
           </div>

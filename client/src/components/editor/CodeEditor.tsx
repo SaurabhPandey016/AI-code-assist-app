@@ -7,21 +7,28 @@ interface CodeEditorProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  readOnly?: boolean;
 }
 
-export function CodeEditor({ value, onChange, placeholder = 'Paste code or upload a file for review...', className = '' }: CodeEditorProps) {
+export function CodeEditor({
+  value,
+  onChange,
+  placeholder = 'Paste code or upload a file for review...',
+  className = '',
+  readOnly = false,
+}: CodeEditorProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [focused, setFocused] = useState(false);
 
   useEffect(() => {
-    if (!focused && ref.current && ref.current.textContent !== value) {
-      ref.current.textContent = value || '';
+    if (!focused && ref.current && ref.current.innerText !== value) {
+      ref.current.innerText = value || '';
     }
   }, [value, focused]);
 
   const handleInput = () => {
     if (!ref.current) return;
-    onChange(ref.current.textContent || '');
+    onChange(ref.current.innerText || '');
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -52,7 +59,7 @@ export function CodeEditor({ value, onChange, placeholder = 'Paste code or uploa
         ref={ref}
         role="textbox"
         aria-multiline="true"
-        contentEditable
+        contentEditable={!readOnly}
         spellCheck={false}
         suppressContentEditableWarning
         onFocus={() => setFocused(true)}
@@ -62,7 +69,7 @@ export function CodeEditor({ value, onChange, placeholder = 'Paste code or uploa
         }}
         onInput={handleInput}
         onKeyDown={handleKeyDown}
-        className="min-h-[300px] w-full overflow-auto rounded-3xl border border-white/10 bg-slate-950/80 p-4 font-mono text-sm leading-6 text-slate-100 outline-none transition focus:border-cyan-400/30"
+        className={`min-h-[300px] w-full overflow-auto rounded-3xl border border-white/10 bg-slate-950/80 p-4 font-mono text-sm leading-6 text-slate-100 outline-none transition focus:border-cyan-400/30 ${readOnly ? 'cursor-text' : 'cursor-text'}`}
       />
     </div>
   );

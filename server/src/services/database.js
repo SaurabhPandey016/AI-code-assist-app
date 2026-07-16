@@ -67,8 +67,24 @@ async function revokeRefreshToken(token) {
   return true;
 }
 
+async function findRefreshToken(token) {
+  return prisma.refreshToken.findUnique({ where: { token } });
+}
+
 async function findUserByEmail(email) {
   return prisma.user.findUnique({ where: { email } });
+}
+
+async function findUserById(id) {
+  return prisma.user.findUnique({ where: { id } });
+}
+
+async function getAllUserEmails() {
+  return prisma.user.findMany({ select: { email: true } });
+}
+
+async function countUsers() {
+  return prisma.user.count();
 }
 
 export {
@@ -80,8 +96,12 @@ export {
   findChatById,
   updateChatTitle,
   deleteChat,
+  findRefreshToken,
   findUserByEmail,
+  findUserById,
   createUser,
   saveRefreshToken,
   revokeRefreshToken,
+  countUsers,
+  getAllUserEmails,
 };

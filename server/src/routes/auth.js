@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { findUserByEmail, createUser, saveRefreshToken, revokeRefreshToken } from '../services/database.js';
+import { findRefreshToken, findUserByEmail, findUserById, createUser, saveRefreshToken, revokeRefreshToken } from '../services/database.js';
 
 const router = express.Router();
 
@@ -41,22 +41,22 @@ router.post('/auth/login', async (req, res) => {
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.status(401).json({ message: 'Invalid credentials.' });
 
-    const accessToken = createAccessToken(user);
     const refreshToken = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: `${REFRESH_EXPIRES_DAYS}d` });
 
     const expiresAt = new Date(Date.now() + REFRESH_EXPIRES_DAYS * 24 * 60 * 60 * 1000);
     await saveRefreshToken({ token: refreshToken, userId: user.id, expiresAt });
 
-    // Set refresh token as httpOnly cookie
-    res.cookie('refreshToken', refreshToken, {
+    const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: REFRESH_EXPIRES_DAYS * 24 * 60 * 60 * 1000,
       path: '/',
-    });
+    };
 
-    return res.json({ accessToken, user: { id: user.id, email: user.email, name: user.name } });
+    res.cookie('refreshToken', refreshToken, cookieOptions);
+
+    return res.json({ user: { id: user.id, email: user.email, name: user.name } });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: 'Login failed.' });
@@ -67,7 +67,7 @@ router.post('/auth/logout', async (req, res) => {
   try {
     const token = req.cookies?.refreshToken || req.body?.refreshToken;
     if (token) await revokeRefreshToken(token);
-    res.clearCookie('refreshToken', { path: '/' });
+    res.clearCookie('refreshToken', { path: '/', sameSite: 'none', secure: process.env.NODE_ENV === 'production' });
     return res.json({ message: 'Logged out' });
   } catch (err) {
     console.error(err);
@@ -77,11 +77,14 @@ router.post('/auth/logout', async (req, res) => {
 
 router.get('/auth/me', async (req, res) => {
   try {
-    const auth = req.headers.authorization || '';
-    const token = auth.replace(/^Bearer\s+/i, '') || null;
-    if (!token) return res.status(401).json({ message: 'Not authenticated' });
-    const payload = jwt.verify(token, JWT_SECRET);
-    return res.json({ id: payload.sub, email: payload.email, name: payload.name });
+    const cookieToken = req.cookies?.refreshToken || null;
+    if (!cookieToken) return res.status(401).json({ message: 'Not authenticated' });
+    const validToken = await findRefreshToken(cookieToken);
+    if (!validToken) return res.status(401).json({ message: 'Not authenticated' });
+    const payload = jwt.verify(cookieToken, JWT_SECRET);
+    const user = await findUserById(payload.sub);
+    if (!user) return res.status(401).json({ message: 'Not authenticated' });
+    return res.json({ id: user.id, email: user.email, name: user.name });
   } catch (err) {
     return res.status(401).json({ message: 'Not authenticated' });
   }
