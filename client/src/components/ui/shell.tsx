@@ -36,6 +36,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link href="/" className="transition hover:text-white">Home</Link>
             {user ? (
               <>
+                <Link href="/dashboard" className="transition hover:text-white">Dashboard</Link>
+                <Link href="/profile" className="transition hover:text-white">Profile</Link>
                 <span className="text-sm text-slate-200">{user.name || user.email}</span>
                 <button onClick={() => { clientLogout(); setUser(null); window.location.href = '/'; }} className="rounded-full bg-white/5 px-3 py-1 text-sm text-slate-100">Logout</button>
               </>

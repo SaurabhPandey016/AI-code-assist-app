@@ -79,6 +79,17 @@ async function findUserById(id) {
   return prisma.user.findUnique({ where: { id } });
 }
 
+async function updateUserProfile({ userId, name, email, password }) {
+  return prisma.user.update({
+    where: { id: userId },
+    data: {
+      ...(name !== undefined ? { name } : {}),
+      ...(email !== undefined ? { email } : {}),
+      ...(password ? { password } : {}),
+    },
+  });
+}
+
 async function getAllUserEmails() {
   return prisma.user.findMany({ select: { email: true } });
 }
@@ -99,6 +110,7 @@ export {
   findRefreshToken,
   findUserByEmail,
   findUserById,
+  updateUserProfile,
   createUser,
   saveRefreshToken,
   revokeRefreshToken,

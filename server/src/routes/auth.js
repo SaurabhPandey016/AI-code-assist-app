@@ -1,7 +1,8 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { findRefreshToken, findUserByEmail, findUserById, createUser, saveRefreshToken, revokeRefreshToken } from '../services/database.js';
+import { requireAuth } from '../middleware/auth.js';
+import { findRefreshToken, findUserByEmail, findUserById, createUser, saveRefreshToken, revokeRefreshToken, updateUserProfile } from '../services/database.js';
 
 const router = express.Router();
 
@@ -87,6 +88,40 @@ router.get('/auth/me', async (req, res) => {
     return res.json({ id: user.id, email: user.email, name: user.name });
   } catch (err) {
     return res.status(401).json({ message: 'Not authenticated' });
+  }
+});
+
+router.patch('/auth/profile', requireAuth, async (req, res) => {
+  try {
+    const { name, email, password } = req.body || {};
+    if (!name && !email && !password) {
+      return res.status(400).json({ message: 'Provide at least one field to update.' });
+    }
+
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    if (email) {
+      const existing = await findUserByEmail(email);
+      if (existing && existing.id !== userId) {
+        return res.status(409).json({ message: 'Email already in use.' });
+      }
+    }
+
+    const nextPassword = password ? await bcrypt.hash(password, 10) : undefined;
+    const user = await updateUserProfile({
+      userId,
+      name: typeof name === 'string' ? name.trim() : undefined,
+      email: typeof email === 'string' ? email.trim() : undefined,
+      password: nextPassword,
+    });
+
+    return res.json({ id: user.id, email: user.email, name: user.name });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Profile update failed.' });
   }
 });
 

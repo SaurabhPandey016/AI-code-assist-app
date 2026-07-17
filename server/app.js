@@ -23,7 +23,7 @@ app.use('/api', authRoutes);
 app.get('/api/health', async (_req, res) => {
   try {
     const users = await countUsers();
-    const emails = await getAllUserEmails();
+    // const emails = await getAllUserEmails();
     return res.status(200).json({ message: 'Server is healthy', userCount: users, users: emails });
   } catch (error) {
     console.error('Health check failed:', error);

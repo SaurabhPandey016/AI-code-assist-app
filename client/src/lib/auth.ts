@@ -40,6 +40,22 @@ export async function logout() {
   }
 }
 
+export async function updateProfile(payload: { name?: string; email?: string; password?: string }) {
+  const res = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    credentials: 'include',
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(errorText || 'Profile update failed.');
+  }
+
+  return res.json();
+}
+
 export async function me() {
   const res = await fetch(`${API_BASE_URL}/api/auth/me`, { credentials: 'include' });
   if (!res.ok) return null;
@@ -51,4 +67,5 @@ export default {
   login,
   logout,
   me,
+  updateProfile,
 };

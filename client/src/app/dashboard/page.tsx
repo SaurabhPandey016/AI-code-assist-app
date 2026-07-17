@@ -212,8 +212,8 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      <div className="grid gap-6 xl:grid-cols-[300px_1fr]">
-        <aside className="rounded-[2rem] border border-white/10 bg-slate-900/75 p-5 shadow-2xl shadow-cyan-950/30 backdrop-blur-xl">
+      <div className="grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
+        <aside className="rounded-[2rem] border border-white/10 bg-slate-900/75 p-4 shadow-2xl shadow-cyan-950/30 backdrop-blur-xl">
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.35em] text-cyan-300">Workspace</p>
@@ -262,7 +262,7 @@ export default function DashboardPage() {
           </div>
         </aside>
 
-        <section className="space-y-6 rounded-[2rem] border border-white/10 bg-slate-900/75 p-6 shadow-2xl shadow-violet-950/30 backdrop-blur-xl">
+        <section className="space-y-5 rounded-[2rem] border border-white/10 bg-slate-900/75 p-4 shadow-2xl shadow-violet-950/30 backdrop-blur-xl sm:p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.35em] text-cyan-300">AI Review</p>
@@ -291,7 +291,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-4 xl:grid-cols-[1fr_420px]">
-            <div className="space-y-4 rounded-[1.75rem] border border-white/10 bg-slate-950/70 p-5">
+            <div className="space-y-4 rounded-[1.5rem] border border-white/10 bg-slate-950/70 p-4">
               <form className="space-y-4" onSubmit={handleSubmit}>
                 <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
                   <button
@@ -337,36 +337,36 @@ export default function DashboardPage() {
               {error ? <div className="rounded-3xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200">{error}</div> : null}
             </div>
 
-            <aside className="space-y-4 rounded-[1.75rem] border border-white/10 bg-slate-950/70 p-5">
-              <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-4">
+            <aside className="space-y-4 rounded-[1.5rem] border border-white/10 bg-slate-950/70 p-4">
+              <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-3">
                 <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">Editor tools</p>
-                <p className="mt-3 text-sm text-slate-400">Use the code editor above to paste full files or snippets. Upload a file if you want the assistant to analyze an actual source file.</p>
+                <p className="mt-2 text-sm text-slate-400">Use the editor to paste code, upload files, and generate review outcomes.</p>
               </div>
-              <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-4">
+              <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-3">
                 <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">Review details</p>
                 <div className="mt-3 grid gap-3">
-                  <div className="rounded-3xl bg-slate-950/80 p-4 text-sm text-slate-100">
-                    <p className="font-semibold text-slate-100">Latest assistant review</p>
-                    <p className="mt-2 text-sm leading-6 text-slate-300">{reviewSummary}</p>
+                  <div className="rounded-2xl bg-slate-950/80 p-3 text-sm text-slate-100">
+                    <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">Latest review</p>
+                    <p className="mt-2 text-xs leading-6 text-slate-300">{reviewSummary}</p>
                   </div>
-                  <div className="rounded-3xl bg-slate-950/80 p-4 text-sm text-slate-100">
-                    <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Review score</p>
-                    <div className="mt-3 flex items-end justify-between gap-3">
-                      <span className="text-4xl font-semibold text-cyan-300">{reviewPoints}</span>
-                      <span className="rounded-full bg-slate-900/80 px-3 py-1 text-xs uppercase tracking-[0.28em] text-slate-400">Score out of 100</span>
+                  <div className="rounded-2xl bg-slate-950/80 p-3 text-sm text-slate-100">
+                    <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">Review score</p>
+                    <div className="mt-2 flex items-end justify-between gap-3">
+                      <span className="text-3xl font-semibold text-cyan-300">{reviewPoints}</span>
+                      <span className="rounded-full bg-slate-900/80 px-2 py-1 text-[10px] uppercase tracking-[0.28em] text-slate-400">/100</span>
                     </div>
-                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
                       <div className="h-full rounded-full bg-cyan-400" style={{ width: `${reviewPoints}%` }} />
                     </div>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-3xl bg-slate-950/80 p-4 text-sm text-slate-100">
-                      <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Messages in chat</p>
-                      <p className="mt-3 text-3xl font-semibold text-slate-300">{messages.length}</p>
+                    <div className="rounded-2xl bg-slate-950/80 p-3 text-sm text-slate-100">
+                      <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">Messages</p>
+                      <p className="mt-2 text-2xl font-semibold text-slate-300">{messages.length}</p>
                     </div>
-                    <div className="rounded-3xl bg-slate-950/80 p-4 text-sm text-slate-100">
-                      <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Active chat</p>
-                      <p className="mt-3 text-lg font-semibold text-slate-200">{activeChat?.title || 'No chat selected'}</p>
+                    <div className="rounded-2xl bg-slate-950/80 p-3 text-sm text-slate-100">
+                      <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">Active chat</p>
+                      <p className="mt-2 text-sm font-semibold text-slate-200">{activeChat?.title || 'No chat selected'}</p>
                     </div>
                   </div>
                 </div>
@@ -374,25 +374,50 @@ export default function DashboardPage() {
             </aside>
           </div>
 
-          <div className="space-y-4">
-            {messages.map((message) => (
-              <div key={message.id} className={`w-full rounded-[1.75rem] border p-5 transition ${message.role === 'user' ? 'border-cyan-400/20 bg-cyan-500/10' : 'border-white/10 bg-slate-950/80'}`}>
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{message.role === 'user' ? 'You' : 'Assistant'}</p>
-                  <span className="rounded-full bg-slate-900/70 px-3 py-1 text-[11px] uppercase tracking-[0.3em] text-slate-500">{message.role === 'user' ? 'Prompt' : 'Response'}</span>
-                </div>
-                <div className="w-full max-w-full overflow-hidden rounded-3xl border border-white/5 bg-slate-900/90 p-4">
-                  <div className="max-w-[90ch] whitespace-pre-wrap break-words text-sm leading-7 text-slate-100">
-                    {message.content}
+          <div className="space-y-3">
+            {messages.map((message) => {
+              const isAssistant = message.role === 'assistant';
+              const reviewLines = message.content.split(/\n+/).filter(Boolean);
+
+              return (
+                <div key={message.id} className={`w-full rounded-[1.4rem] border p-4 transition ${message.role === 'user' ? 'border-cyan-400/20 bg-cyan-500/10' : 'border-white/10 bg-slate-950/80'}`}>
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-[11px] uppercase tracking-[0.3em] text-slate-400">{message.role === 'user' ? 'You' : 'Assistant'}</p>
+                    <span className="rounded-full bg-slate-900/70 px-3 py-1 text-[10px] uppercase tracking-[0.28em] text-slate-500">{message.role === 'user' ? 'Prompt' : 'Response'}</span>
                   </div>
+                  <div className="w-full overflow-hidden rounded-2xl border border-white/5 bg-slate-900/90 p-3">
+                    {isAssistant ? (
+                      <div className="max-w-[72ch] space-y-2 text-[13px] leading-6 text-slate-100">
+                        {reviewLines.map((line, index) => {
+                          const trimmed = line.trim();
+                          const isBullet = trimmed.startsWith('-') || trimmed.startsWith('•');
+                          const isLabel = trimmed.includes(':');
+
+                          if (isBullet) {
+                            return <p key={`${message.id}-${index}`} className="text-slate-200">• {trimmed.replace(/^[-•]\s*/, '')}</p>;
+                          }
+
+                          if (isLabel) {
+                            return <p key={`${message.id}-${index}`} className="font-semibold text-cyan-200">{trimmed}</p>;
+                          }
+
+                          return <p key={`${message.id}-${index}`} className="text-slate-300">{trimmed}</p>;
+                        })}
+                      </div>
+                    ) : (
+                      <div className="max-w-[72ch] whitespace-pre-wrap break-words text-[13px] leading-6 text-slate-100">
+                        {message.content}
+                      </div>
+                    )}
+                  </div>
+                  {message.code ? (
+                    <pre className="mt-3 w-full max-w-full overflow-x-auto rounded-2xl bg-slate-900/90 p-3 text-[11px] leading-5 text-slate-300">
+                      {message.code}
+                    </pre>
+                  ) : null}
                 </div>
-                {message.code ? (
-                  <pre className="mt-4 w-full max-w-full overflow-x-auto rounded-3xl bg-slate-900/90 p-4 text-xs leading-6 text-slate-300">
-                    {message.code}
-                  </pre>
-                ) : null}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       </div>

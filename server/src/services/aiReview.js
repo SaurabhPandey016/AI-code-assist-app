@@ -16,7 +16,7 @@ async function generateAiReview({ code, staticAnalysis, filename }) {
     };
   }
 
-  const prompt = `You are an expert senior engineer reviewing code.\n\nReview the following code snippet and provide:\n- a short summary\n- 3 to 5 actionable suggestions\n- a confidence level\n\nStatic analysis context:\n${JSON.stringify(staticAnalysis, null, 2)}\n\nCode:\n${code}\n\nFilename: ${filename}`;
+  const prompt = `You are an expert senior engineer reviewing code.\n\nReturn a concise, polished review in this format:\n1. Outcome: 1 short sentence\n2. Key issues: 2 to 3 short bullets\n3. Recommended fix: 1 short bullet\n4. Confidence: low / medium / high\n\nKeep the response short, practical, and easy to scan.\n\nStatic analysis context:\n${JSON.stringify(staticAnalysis, null, 2)}\n\nCode:\n${code}\n\nFilename: ${filename}`;
 
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
