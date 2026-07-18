@@ -24,7 +24,7 @@ app.get('/api/health', async (_req, res) => {
   try {
     const users = await countUsers();
     // const emails = await getAllUserEmails();
-    return res.status(200).json({ message: 'Server is healthy', userCount: users, users: emails });
+    return res.status(200).json({ message: 'Server is healthy', userCount: users});
   } catch (error) {
     console.error('Health check failed:', error);
     return res.status(500).json({ message: 'Health check failed' });
