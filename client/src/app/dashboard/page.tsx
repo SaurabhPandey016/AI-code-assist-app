@@ -24,6 +24,11 @@ type MessageItem = {
   filename?: string | null;
 };
 
+type ReviewBlock =
+  | { type: 'section'; title: string; summary: string; notes: string[] }
+  | { type: 'list'; items: string[] }
+  | { type: 'paragraph'; text: string };
+
 export default function DashboardPage() {
   const router = useRouter();
   const [chats, setChats] = useState<ChatSummary[]>([]);
@@ -91,6 +96,49 @@ export default function DashboardPage() {
   }, [latestAssistantMessage]);
 
   const reviewSummary = latestAssistantMessage?.content || 'Submit a review to see detailed assistant feedback here.';
+
+  const buildReviewBlocks = (content: string): ReviewBlock[] => {
+    const normalized = content.replace(/\r\n/g, '\n').trim();
+    if (!normalized) return [];
+
+    const paragraphs = normalized.split(/\n\s*\n+/).map((block) => block.trim()).filter(Boolean);
+    const blocks: ReviewBlock[] = [];
+
+    paragraphs.forEach((block) => {
+      const lines = block.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+      const firstLine = lines[0] ?? '';
+      const headingMatch = firstLine.match(/^([A-Za-z][A-Za-z\s&/()\-]+):\s*(.*)$/);
+
+      if (headingMatch) {
+        const title = headingMatch[1].trim();
+        const summary = headingMatch[2].trim();
+        const notes = lines.slice(1).map((line) => line.replace(/^[-•]\s*/, '')).filter(Boolean);
+
+        blocks.push({
+          type: 'section',
+          title,
+          summary: summary || notes[0] || '',
+          notes,
+        });
+        return;
+      }
+
+      const bulletItems = lines.filter((line) => /^[-•]\s+/.test(line));
+      if (bulletItems.length > 0) {
+        blocks.push({
+          type: 'list',
+          items: bulletItems.map((line) => line.replace(/^[-•]\s*/, '').trim()),
+        });
+        return;
+      }
+
+      blocks.push({ type: 'paragraph', text: lines.join(' ') });
+    });
+
+    return blocks;
+  };
+
+  const parsedReviewBlocks = useMemo(() => buildReviewBlocks(reviewSummary), [reviewSummary]);
 
   const handleStartNewChat = async () => {
     try {
@@ -347,7 +395,43 @@ export default function DashboardPage() {
                 <div className="mt-3 grid gap-3">
                   <div className="rounded-2xl bg-slate-950/80 p-3 text-sm text-slate-100">
                     <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">Latest review</p>
-                    <p className="mt-2 text-xs leading-6 text-slate-300">{reviewSummary}</p>
+                    <div className="mt-2 max-h-[280px] space-y-2 overflow-y-auto pr-1 text-[12px] leading-5 text-slate-300">
+                      {parsedReviewBlocks.map((block, index) => {
+                        if (block.type === 'section') {
+                          return (
+                            <div key={`${block.title}-${index}`} className="rounded-xl border border-white/5 bg-slate-900/80 p-2">
+                              <p className="mb-1 text-[10px] uppercase tracking-[0.28em] text-cyan-300">{block.title}</p>
+                              <p className="text-slate-100">{block.summary}</p>
+                              {block.notes.length > 0 ? (
+                                <div className="mt-2 space-y-1 text-slate-200">
+                                  {block.notes.map((item, noteIndex) => (
+                                    <p key={`${block.title}-${noteIndex}`} className="leading-5">{item}</p>
+                                  ))}
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        }
+
+                        if (block.type === 'list') {
+                          return (
+                            <div key={`list-${index}`} className="rounded-xl border border-white/5 bg-slate-900/80 p-2">
+                              <div className="space-y-1 text-slate-200">
+                                {block.items.map((item, itemIndex) => (
+                                  <p key={`list-${itemIndex}`} className="leading-5">{item}</p>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div key={`paragraph-${index}`} className="rounded-xl border border-white/5 bg-slate-900/80 p-2 text-slate-200">
+                            {block.text}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                   <div className="rounded-2xl bg-slate-950/80 p-3 text-sm text-slate-100">
                     <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">Review score</p>
@@ -374,10 +458,10 @@ export default function DashboardPage() {
             </aside>
           </div>
 
-          <div className="space-y-3">
+          <div className="max-h-[480px] space-y-3 overflow-y-auto pr-1">
             {messages.map((message) => {
               const isAssistant = message.role === 'assistant';
-              const reviewLines = message.content.split(/\n+/).filter(Boolean);
+              const reviewBlocks = buildReviewBlocks(message.content);
 
               return (
                 <div key={message.id} className={`w-full rounded-[1.4rem] border p-4 transition ${message.role === 'user' ? 'border-cyan-400/20 bg-cyan-500/10' : 'border-white/10 bg-slate-950/80'}`}>
@@ -388,20 +472,40 @@ export default function DashboardPage() {
                   <div className="w-full overflow-hidden rounded-2xl border border-white/5 bg-slate-900/90 p-3">
                     {isAssistant ? (
                       <div className="max-w-[72ch] space-y-2 text-[13px] leading-6 text-slate-100">
-                        {reviewLines.map((line, index) => {
-                          const trimmed = line.trim();
-                          const isBullet = trimmed.startsWith('-') || trimmed.startsWith('•');
-                          const isLabel = trimmed.includes(':');
-
-                          if (isBullet) {
-                            return <p key={`${message.id}-${index}`} className="text-slate-200">• {trimmed.replace(/^[-•]\s*/, '')}</p>;
+                        {reviewBlocks.map((block, index) => {
+                          if (block.type === 'section') {
+                            return (
+                              <div key={`${message.id}-${block.title}-${index}`} className="rounded-xl border border-white/5 bg-slate-950/70 p-3">
+                                <p className="mb-1 text-[10px] uppercase tracking-[0.28em] text-cyan-300">{block.title}</p>
+                                <p className="text-slate-100">{block.summary}</p>
+                                {block.notes.length > 0 ? (
+                                  <div className="mt-2 space-y-1 text-slate-200">
+                                    {block.notes.map((item, noteIndex) => (
+                                      <p key={`${message.id}-${block.title}-${noteIndex}`} className="leading-5">{item}</p>
+                                    ))}
+                                  </div>
+                                ) : null}
+                              </div>
+                            );
                           }
 
-                          if (isLabel) {
-                            return <p key={`${message.id}-${index}`} className="font-semibold text-cyan-200">{trimmed}</p>;
+                          if (block.type === 'list') {
+                            return (
+                              <div key={`${message.id}-list-${index}`} className="rounded-xl border border-white/5 bg-slate-950/70 p-3">
+                                <div className="space-y-1 text-slate-200">
+                                  {block.items.map((item, itemIndex) => (
+                                    <p key={`${message.id}-item-${itemIndex}`} className="leading-5">{item}</p>
+                                  ))}
+                                </div>
+                              </div>
+                            );
                           }
 
-                          return <p key={`${message.id}-${index}`} className="text-slate-300">{trimmed}</p>;
+                          return (
+                            <p key={`${message.id}-paragraph-${index}`} className="rounded-xl border border-white/5 bg-slate-950/70 p-3 text-slate-200">
+                              {block.text}
+                            </p>
+                          );
                         })}
                       </div>
                     ) : (

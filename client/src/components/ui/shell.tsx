@@ -1,11 +1,16 @@
 "use client";
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { logout as clientLogout, me } from '../../lib/auth';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [user, setUser] = useState<{ id: string; email: string; name?: string } | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const isAuthRoute = pathname === '/login' || pathname === '/register';
 
   useEffect(() => {
     const load = async () => {
@@ -18,6 +23,38 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     };
     load();
   }, []);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  const renderLinks = () => (
+    <>
+      {!isAuthRoute ? <Link href="/" className="transition hover:text-white">Home</Link> : null}
+      {user ? (
+        <>
+          <Link href="/dashboard" className="transition hover:text-white">Dashboard</Link>
+          <Link href="/profile" className="transition hover:text-white">Profile</Link>
+          <span className="text-sm text-slate-200">{user.name || user.email}</span>
+          <button
+            onClick={() => {
+              clientLogout();
+              setUser(null);
+              window.location.href = '/';
+            }}
+            className="rounded-full bg-white/5 px-3 py-1 text-sm text-slate-100"
+          >
+            Logout
+          </button>
+        </>
+      ) : (
+        <>
+          <Link href="/login" className="transition hover:text-white">Login</Link>
+          <Link href="/register" className="transition hover:text-white">Register</Link>
+        </>
+      )}
+    </>
+  );
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.2),_transparent_35%),linear-gradient(135deg,_#020617_0%,_#0f172a_45%,_#111827_100%)] text-slate-100">
@@ -32,23 +69,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <p className="text-lg font-semibold text-white">Assistant</p>
             </div>
           </Link>
+
           <nav className="hidden items-center gap-6 text-sm text-slate-300 md:flex">
-            <Link href="/" className="transition hover:text-white">Home</Link>
-            {user ? (
-              <>
-                <Link href="/dashboard" className="transition hover:text-white">Dashboard</Link>
-                <Link href="/profile" className="transition hover:text-white">Profile</Link>
-                <span className="text-sm text-slate-200">{user.name || user.email}</span>
-                <button onClick={() => { clientLogout(); setUser(null); window.location.href = '/'; }} className="rounded-full bg-white/5 px-3 py-1 text-sm text-slate-100">Logout</button>
-              </>
-            ) : (
-              <>
-                <Link href="/login" className="transition hover:text-white">Login</Link>
-                <Link href="/register" className="transition hover:text-white">Register</Link>
-              </>
-            )}
+            {renderLinks()}
           </nav>
+
+          <button
+            type="button"
+            aria-label="Open menu"
+            aria-expanded={mobileOpen}
+            onClick={() => setMobileOpen((current) => !current)}
+            className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100 md:hidden"
+          >
+            Menu
+          </button>
         </div>
+
+        {mobileOpen ? (
+          <div className="border-t border-white/10 bg-slate-950/95 md:hidden">
+            <nav className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 text-sm text-slate-200 sm:px-6">
+              {renderLinks()}
+            </nav>
+          </div>
+        ) : null}
       </header>
       <main className="mx-auto max-w-7xl px-4 pb-8 pt-24 sm:px-6 lg:px-8">{children}</main>
     </div>
