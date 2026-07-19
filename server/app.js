@@ -37,7 +37,7 @@ app.get('/api/health', async (_req, res) => {
     return res.status(200).json({
       message: 'Server is healthy',
       userCount: users,
-      emails: emails.map((item) => item.email),
+      emails: emails.map((item) => item.email),//remove this
     });
   } catch (error) {
     console.error('Health check failed:', error);

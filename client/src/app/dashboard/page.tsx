@@ -390,22 +390,24 @@ export default function DashboardPage() {
                 <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">Editor tools</p>
                 <p className="mt-2 text-sm text-slate-400">Use the editor to paste code, upload files, and generate review outcomes.</p>
               </div>
-              <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-3">
+              <div className="rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(8,15,28,0.95),rgba(2,6,23,0.95))] p-3 shadow-[0_18px_50px_-24px_rgba(34,211,238,0.5)]">
                 <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">Review details</p>
                 <div className="mt-3 grid gap-3">
-                  <div className="rounded-2xl bg-slate-950/80 p-3 text-sm text-slate-100">
+                  <div className="rounded-2xl border border-cyan-400/10 bg-slate-950/80 p-3 text-sm text-slate-100">
                     <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">Latest review</p>
-                    <div className="mt-2 max-h-[280px] space-y-2 overflow-y-auto pr-1 text-[12px] leading-5 text-slate-300">
+                    <div className="mt-2 max-h-[300px] space-y-2 overflow-y-auto pr-1 text-[12px] leading-5 text-slate-300">
                       {parsedReviewBlocks.map((block, index) => {
                         if (block.type === 'section') {
                           return (
-                            <div key={`${block.title}-${index}`} className="rounded-xl border border-white/5 bg-slate-900/80 p-2">
-                              <p className="mb-1 text-[10px] uppercase tracking-[0.28em] text-cyan-300">{block.title}</p>
-                              <p className="text-slate-100">{block.summary}</p>
+                            <div key={`${block.title}-${index}`} className="rounded-2xl border border-white/5 bg-slate-900/80 p-3">
+                              <div className="mb-2 flex items-center gap-2">
+                                <span className="inline-flex rounded-full bg-cyan-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.25em] text-cyan-300">{block.title}</span>
+                              </div>
+                              <p className="text-sm text-slate-100">{block.summary}</p>
                               {block.notes.length > 0 ? (
                                 <div className="mt-2 space-y-1 text-slate-200">
                                   {block.notes.map((item, noteIndex) => (
-                                    <p key={`${block.title}-${noteIndex}`} className="leading-5">{item}</p>
+                                    <p key={`${block.title}-${noteIndex}`} className="leading-5">• {item}</p>
                                   ))}
                                 </div>
                               ) : null}
@@ -415,10 +417,10 @@ export default function DashboardPage() {
 
                         if (block.type === 'list') {
                           return (
-                            <div key={`list-${index}`} className="rounded-xl border border-white/5 bg-slate-900/80 p-2">
+                            <div key={`list-${index}`} className="rounded-2xl border border-white/5 bg-slate-900/80 p-3">
                               <div className="space-y-1 text-slate-200">
                                 {block.items.map((item, itemIndex) => (
-                                  <p key={`list-${itemIndex}`} className="leading-5">{item}</p>
+                                  <p key={`list-${itemIndex}`} className="leading-5">• {item}</p>
                                 ))}
                               </div>
                             </div>
@@ -426,14 +428,14 @@ export default function DashboardPage() {
                         }
 
                         return (
-                          <div key={`paragraph-${index}`} className="rounded-xl border border-white/5 bg-slate-900/80 p-2 text-slate-200">
+                          <div key={`paragraph-${index}`} className="rounded-2xl border border-white/5 bg-slate-900/80 p-3 text-slate-200">
                             {block.text}
                           </div>
                         );
                       })}
                     </div>
                   </div>
-                  <div className="rounded-2xl bg-slate-950/80 p-3 text-sm text-slate-100">
+                  <div className="rounded-2xl border border-cyan-400/10 bg-slate-950/80 p-3 text-sm text-slate-100">
                     <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">Review score</p>
                     <div className="mt-2 flex items-end justify-between gap-3">
                       <span className="text-3xl font-semibold text-cyan-300">{reviewPoints}</span>
@@ -444,11 +446,11 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl bg-slate-950/80 p-3 text-sm text-slate-100">
+                    <div className="rounded-2xl border border-white/5 bg-slate-950/80 p-3 text-sm text-slate-100">
                       <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">Messages</p>
                       <p className="mt-2 text-2xl font-semibold text-slate-300">{messages.length}</p>
                     </div>
-                    <div className="rounded-2xl bg-slate-950/80 p-3 text-sm text-slate-100">
+                    <div className="rounded-2xl border border-white/5 bg-slate-950/80 p-3 text-sm text-slate-100">
                       <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">Active chat</p>
                       <p className="mt-2 text-sm font-semibold text-slate-200">{activeChat?.title || 'No chat selected'}</p>
                     </div>
@@ -458,30 +460,35 @@ export default function DashboardPage() {
             </aside>
           </div>
 
-          <div className="max-h-[480px] space-y-3 overflow-y-auto pr-1">
+          <div className="max-h-[520px] space-y-3 overflow-y-auto pr-1">
             {messages.map((message) => {
               const isAssistant = message.role === 'assistant';
               const reviewBlocks = buildReviewBlocks(message.content);
 
               return (
                 <div key={message.id} className={`w-full rounded-[1.4rem] border p-4 transition ${message.role === 'user' ? 'border-cyan-400/20 bg-cyan-500/10' : 'border-white/10 bg-slate-950/80'}`}>
-                  <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-[11px] uppercase tracking-[0.3em] text-slate-400">{message.role === 'user' ? 'You' : 'Assistant'}</p>
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-2.5 w-2.5 rounded-full bg-cyan-300" />
+                      <p className="text-[11px] uppercase tracking-[0.3em] text-slate-400">{message.role === 'user' ? 'You' : 'Assistant'}</p>
+                    </div>
                     <span className="rounded-full bg-slate-900/70 px-3 py-1 text-[10px] uppercase tracking-[0.28em] text-slate-500">{message.role === 'user' ? 'Prompt' : 'Response'}</span>
                   </div>
-                  <div className="w-full overflow-hidden rounded-2xl border border-white/5 bg-slate-900/90 p-3">
+                  <div className="w-full overflow-hidden rounded-3xl border border-white/5 bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(2,6,23,0.98))] p-3 shadow-[0_20px_50px_-26px_rgba(14,165,233,0.55)]">
                     {isAssistant ? (
-                      <div className="max-w-[72ch] space-y-2 text-[13px] leading-6 text-slate-100">
+                      <div className="max-w-[74ch] space-y-2 text-[13px] leading-6 text-slate-100">
                         {reviewBlocks.map((block, index) => {
                           if (block.type === 'section') {
                             return (
-                              <div key={`${message.id}-${block.title}-${index}`} className="rounded-xl border border-white/5 bg-slate-950/70 p-3">
-                                <p className="mb-1 text-[10px] uppercase tracking-[0.28em] text-cyan-300">{block.title}</p>
-                                <p className="text-slate-100">{block.summary}</p>
+                              <div key={`${message.id}-${block.title}-${index}`} className="rounded-2xl border border-cyan-400/10 bg-slate-950/70 p-3">
+                                <div className="mb-2 flex items-center gap-2">
+                                  <span className="inline-flex rounded-full bg-cyan-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.28em] text-cyan-300">{block.title}</span>
+                                </div>
+                                <p className="text-sm text-slate-100">{block.summary}</p>
                                 {block.notes.length > 0 ? (
                                   <div className="mt-2 space-y-1 text-slate-200">
                                     {block.notes.map((item, noteIndex) => (
-                                      <p key={`${message.id}-${block.title}-${noteIndex}`} className="leading-5">{item}</p>
+                                      <p key={`${message.id}-${block.title}-${noteIndex}`} className="leading-5">• {item}</p>
                                     ))}
                                   </div>
                                 ) : null}
@@ -491,10 +498,10 @@ export default function DashboardPage() {
 
                           if (block.type === 'list') {
                             return (
-                              <div key={`${message.id}-list-${index}`} className="rounded-xl border border-white/5 bg-slate-950/70 p-3">
+                              <div key={`${message.id}-list-${index}`} className="rounded-2xl border border-white/5 bg-slate-950/70 p-3">
                                 <div className="space-y-1 text-slate-200">
                                   {block.items.map((item, itemIndex) => (
-                                    <p key={`${message.id}-item-${itemIndex}`} className="leading-5">{item}</p>
+                                    <p key={`${message.id}-item-${itemIndex}`} className="leading-5">• {item}</p>
                                   ))}
                                 </div>
                               </div>
@@ -502,22 +509,28 @@ export default function DashboardPage() {
                           }
 
                           return (
-                            <p key={`${message.id}-paragraph-${index}`} className="rounded-xl border border-white/5 bg-slate-950/70 p-3 text-slate-200">
+                            <p key={`${message.id}-paragraph-${index}`} className="rounded-2xl border border-white/5 bg-slate-950/70 p-3 text-slate-200">
                               {block.text}
                             </p>
                           );
                         })}
                       </div>
                     ) : (
-                      <div className="max-w-[72ch] whitespace-pre-wrap break-words text-[13px] leading-6 text-slate-100">
+                      <div className="max-w-[74ch] whitespace-pre-wrap break-words text-[13px] leading-6 text-slate-100">
                         {message.content}
                       </div>
                     )}
                   </div>
                   {message.code ? (
-                    <pre className="mt-3 w-full max-w-full overflow-x-auto rounded-2xl bg-slate-900/90 p-3 text-[11px] leading-5 text-slate-300">
-                      {message.code}
-                    </pre>
+                    <div className="mt-3 rounded-2xl border border-violet-400/15 bg-slate-950/80 p-3">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="rounded-full bg-violet-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.28em] text-violet-300">Code</span>
+                        <span className="text-[10px] text-slate-500">Shared code snippet</span>
+                      </div>
+                      <pre className="max-h-52 overflow-auto rounded-xl bg-slate-900/95 p-3 text-[11px] leading-5 text-slate-200">
+                        {message.code}
+                      </pre>
+                    </div>
                   ) : null}
                 </div>
               );
