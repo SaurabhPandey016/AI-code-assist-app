@@ -24,11 +24,6 @@ type MessageItem = {
   filename?: string | null;
 };
 
-type ReviewBlock =
-  | { type: 'section'; title: string; summary: string; notes: string[] }
-  | { type: 'list'; items: string[] }
-  | { type: 'paragraph'; text: string };
-
 export default function DashboardPage() {
   const router = useRouter();
   const [chats, setChats] = useState<ChatSummary[]>([]);
@@ -95,50 +90,59 @@ export default function DashboardPage() {
     return Math.min(100, Math.max(10, sentences.length * 12));
   }, [latestAssistantMessage]);
 
-  const reviewSummary = latestAssistantMessage?.content || 'Submit a review to see detailed assistant feedback here.';
-
-  const buildReviewBlocks = (content: string): ReviewBlock[] => {
+  const buildCompactReviewSummary = (content: string) => {
     const normalized = content.replace(/\r\n/g, '\n').trim();
-    if (!normalized) return [];
+    if (!normalized) return 'Submit a review to see the most important feedback points here.';
 
-    const paragraphs = normalized.split(/\n\s*\n+/).map((block) => block.trim()).filter(Boolean);
-    const blocks: ReviewBlock[] = [];
+    const sections = normalized
+      .split(/\n\s*\n+/)
+      .map((block) => block.trim())
+      .filter(Boolean);
 
-    paragraphs.forEach((block) => {
-      const lines = block.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+    const summaryLines: string[] = [];
+    const seen = new Set<string>();
+
+    const pushLine = (value: string) => {
+      const cleaned = value.replace(/^[-•]\s*/, '').replace(/\s+/g, ' ').trim();
+      if (!cleaned || seen.has(cleaned)) return;
+      seen.add(cleaned);
+      summaryLines.push(cleaned);
+    };
+
+    sections.forEach((section) => {
+      const lines = section.split(/\n+/).map((line) => line.trim()).filter(Boolean);
       const firstLine = lines[0] ?? '';
       const headingMatch = firstLine.match(/^([A-Za-z][A-Za-z\s&/()\-]+):\s*(.*)$/);
 
       if (headingMatch) {
         const title = headingMatch[1].trim();
         const summary = headingMatch[2].trim();
-        const notes = lines.slice(1).map((line) => line.replace(/^[-•]\s*/, '')).filter(Boolean);
-
-        blocks.push({
-          type: 'section',
-          title,
-          summary: summary || notes[0] || '',
-          notes,
-        });
+        if (summary) {
+          pushLine(`${title}: ${summary}`);
+        }
+        lines.slice(1).forEach((line) => pushLine(line));
         return;
       }
 
-      const bulletItems = lines.filter((line) => /^[-•]\s+/.test(line));
-      if (bulletItems.length > 0) {
-        blocks.push({
-          type: 'list',
-          items: bulletItems.map((line) => line.replace(/^[-•]\s*/, '').trim()),
-        });
+      const bulletLines = lines.filter((line) => /^[-•]\s+/.test(line));
+      if (bulletLines.length > 0) {
+        bulletLines.forEach((line) => pushLine(line));
         return;
       }
 
-      blocks.push({ type: 'paragraph', text: lines.join(' ') });
+      const paragraph = lines.join(' ').replace(/\s+/g, ' ').trim();
+      if (paragraph.length > 180) {
+        pushLine(`${paragraph.slice(0, 180).trim()}…`);
+      } else {
+        pushLine(paragraph);
+      }
     });
 
-    return blocks;
+    return summaryLines.slice(0, 6).join('\n\n');
   };
 
-  const parsedReviewBlocks = useMemo(() => buildReviewBlocks(reviewSummary), [reviewSummary]);
+  const reviewSummary = latestAssistantMessage?.content || 'Submit a review to see detailed assistant feedback here.';
+  const reviewDetailsSummary = useMemo(() => buildCompactReviewSummary(reviewSummary), [reviewSummary]);
 
   const handleStartNewChat = async () => {
     try {
@@ -390,52 +394,17 @@ export default function DashboardPage() {
                 <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">Editor tools</p>
                 <p className="mt-2 text-sm text-slate-400">Use the editor to paste code, upload files, and generate review outcomes.</p>
               </div>
-              <div className="rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(8,15,28,0.95),rgba(2,6,23,0.95))] p-3 shadow-[0_18px_50px_-24px_rgba(34,211,238,0.5)]">
+              <div className="rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(8,15,28,0.98),rgba(2,6,23,0.98))] p-3 shadow-[0_18px_60px_-28px_rgba(34,211,238,0.55)]">
                 <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">Review details</p>
                 <div className="mt-3 grid gap-3">
-                  <div className="rounded-2xl border border-cyan-400/10 bg-slate-950/80 p-3 text-sm text-slate-100">
-                    <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">Latest review</p>
-                    <div className="mt-2 max-h-[300px] space-y-2 overflow-y-auto pr-1 text-[12px] leading-5 text-slate-300">
-                      {parsedReviewBlocks.map((block, index) => {
-                        if (block.type === 'section') {
-                          return (
-                            <div key={`${block.title}-${index}`} className="rounded-2xl border border-white/5 bg-slate-900/80 p-3">
-                              <div className="mb-2 flex items-center gap-2">
-                                <span className="inline-flex rounded-full bg-cyan-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.25em] text-cyan-300">{block.title}</span>
-                              </div>
-                              <p className="text-sm text-slate-100">{block.summary}</p>
-                              {block.notes.length > 0 ? (
-                                <div className="mt-2 space-y-1 text-slate-200">
-                                  {block.notes.map((item, noteIndex) => (
-                                    <p key={`${block.title}-${noteIndex}`} className="leading-5">• {item}</p>
-                                  ))}
-                                </div>
-                              ) : null}
-                            </div>
-                          );
-                        }
-
-                        if (block.type === 'list') {
-                          return (
-                            <div key={`list-${index}`} className="rounded-2xl border border-white/5 bg-slate-900/80 p-3">
-                              <div className="space-y-1 text-slate-200">
-                                {block.items.map((item, itemIndex) => (
-                                  <p key={`list-${itemIndex}`} className="leading-5">• {item}</p>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div key={`paragraph-${index}`} className="rounded-2xl border border-white/5 bg-slate-900/80 p-3 text-slate-200">
-                            {block.text}
-                          </div>
-                        );
-                      })}
+                  <div className="rounded-3xl border border-cyan-400/10 bg-slate-950/80 p-3 text-sm text-slate-100">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">Latest review</p>
+                      <span className="rounded-full bg-cyan-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.24em] text-cyan-300">Live</span>
                     </div>
+                    <CodeEditor value={reviewDetailsSummary} readOnly className="min-h-[180px] max-h-[280px]" />
                   </div>
-                  <div className="rounded-2xl border border-cyan-400/10 bg-slate-950/80 p-3 text-sm text-slate-100">
+                  <div className="rounded-3xl border border-cyan-400/10 bg-slate-950/80 p-3 text-sm text-slate-100">
                     <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">Review score</p>
                     <div className="mt-2 flex items-end justify-between gap-3">
                       <span className="text-3xl font-semibold text-cyan-300">{reviewPoints}</span>
@@ -446,11 +415,11 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl border border-white/5 bg-slate-950/80 p-3 text-sm text-slate-100">
+                    <div className="rounded-3xl border border-white/5 bg-slate-950/80 p-3 text-sm text-slate-100">
                       <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">Messages</p>
                       <p className="mt-2 text-2xl font-semibold text-slate-300">{messages.length}</p>
                     </div>
-                    <div className="rounded-2xl border border-white/5 bg-slate-950/80 p-3 text-sm text-slate-100">
+                    <div className="rounded-3xl border border-white/5 bg-slate-950/80 p-3 text-sm text-slate-100">
                       <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">Active chat</p>
                       <p className="mt-2 text-sm font-semibold text-slate-200">{activeChat?.title || 'No chat selected'}</p>
                     </div>
@@ -463,7 +432,6 @@ export default function DashboardPage() {
           <div className="max-h-[520px] space-y-3 overflow-y-auto pr-1">
             {messages.map((message) => {
               const isAssistant = message.role === 'assistant';
-              const reviewBlocks = buildReviewBlocks(message.content);
 
               return (
                 <div key={message.id} className={`w-full rounded-[1.4rem] border p-4 transition ${message.role === 'user' ? 'border-cyan-400/20 bg-cyan-500/10' : 'border-white/10 bg-slate-950/80'}`}>
@@ -476,45 +444,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="w-full overflow-hidden rounded-3xl border border-white/5 bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(2,6,23,0.98))] p-3 shadow-[0_20px_50px_-26px_rgba(14,165,233,0.55)]">
                     {isAssistant ? (
-                      <div className="max-w-[74ch] space-y-2 text-[13px] leading-6 text-slate-100">
-                        {reviewBlocks.map((block, index) => {
-                          if (block.type === 'section') {
-                            return (
-                              <div key={`${message.id}-${block.title}-${index}`} className="rounded-2xl border border-cyan-400/10 bg-slate-950/70 p-3">
-                                <div className="mb-2 flex items-center gap-2">
-                                  <span className="inline-flex rounded-full bg-cyan-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.28em] text-cyan-300">{block.title}</span>
-                                </div>
-                                <p className="text-sm text-slate-100">{block.summary}</p>
-                                {block.notes.length > 0 ? (
-                                  <div className="mt-2 space-y-1 text-slate-200">
-                                    {block.notes.map((item, noteIndex) => (
-                                      <p key={`${message.id}-${block.title}-${noteIndex}`} className="leading-5">• {item}</p>
-                                    ))}
-                                  </div>
-                                ) : null}
-                              </div>
-                            );
-                          }
-
-                          if (block.type === 'list') {
-                            return (
-                              <div key={`${message.id}-list-${index}`} className="rounded-2xl border border-white/5 bg-slate-950/70 p-3">
-                                <div className="space-y-1 text-slate-200">
-                                  {block.items.map((item, itemIndex) => (
-                                    <p key={`${message.id}-item-${itemIndex}`} className="leading-5">• {item}</p>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          }
-
-                          return (
-                            <p key={`${message.id}-paragraph-${index}`} className="rounded-2xl border border-white/5 bg-slate-950/70 p-3 text-slate-200">
-                              {block.text}
-                            </p>
-                          );
-                        })}
-                      </div>
+                      <CodeEditor value={message.content} readOnly className="min-h-[180px] max-h-[420px]" />
                     ) : (
                       <div className="max-w-[74ch] whitespace-pre-wrap break-words text-[13px] leading-6 text-slate-100">
                         {message.content}
@@ -522,12 +452,12 @@ export default function DashboardPage() {
                     )}
                   </div>
                   {message.code ? (
-                    <div className="mt-3 rounded-2xl border border-violet-400/15 bg-slate-950/80 p-3">
+                    <div className="mt-3 rounded-3xl border border-violet-400/15 bg-slate-950/80 p-3">
                       <div className="mb-2 flex items-center justify-between gap-2">
                         <span className="rounded-full bg-violet-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.28em] text-violet-300">Code</span>
                         <span className="text-[10px] text-slate-500">Shared code snippet</span>
                       </div>
-                      <pre className="max-h-52 overflow-auto rounded-xl bg-slate-900/95 p-3 text-[11px] leading-5 text-slate-200">
+                      <pre className="max-h-52 overflow-auto rounded-2xl bg-slate-900/95 p-3 text-[11px] leading-5 text-slate-200">
                         {message.code}
                       </pre>
                     </div>

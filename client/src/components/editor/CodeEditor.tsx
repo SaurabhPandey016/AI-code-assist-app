@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 interface CodeEditorProps {
   value: string;
-  onChange: (value: string) => void;
+  onChange?: (value: string) => void;
   placeholder?: string;
   className?: string;
   readOnly?: boolean;
@@ -28,7 +28,7 @@ export function CodeEditor({
 
   const handleInput = () => {
     if (!ref.current) return;
-    onChange(ref.current.innerText || '');
+    onChange?.(ref.current.innerText || '');
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -49,7 +49,7 @@ export function CodeEditor({
   };
 
   return (
-    <div className={`relative ${className}`}>
+    <div className="relative">
       {!focused && !value ? (
         <div className="pointer-events-none absolute inset-0 rounded-3xl border border-transparent bg-transparent p-4 text-sm text-slate-500">
           {placeholder}
@@ -69,7 +69,7 @@ export function CodeEditor({
         }}
         onInput={handleInput}
         onKeyDown={handleKeyDown}
-        className={`min-h-[300px] w-full overflow-auto rounded-3xl border border-white/10 bg-slate-950/80 p-4 font-mono text-sm leading-6 text-slate-100 outline-none transition focus:border-cyan-400/30 ${readOnly ? 'cursor-text' : 'cursor-text'}`}
+        className={`min-h-[300px] max-h-[420px] w-full overflow-auto rounded-3xl border border-white/10 bg-slate-950/80 p-4 font-mono text-sm leading-6 text-slate-100 outline-none transition focus:border-cyan-400/30 ${className} ${readOnly ? 'cursor-default' : 'cursor-text'}`}
       />
     </div>
   );
