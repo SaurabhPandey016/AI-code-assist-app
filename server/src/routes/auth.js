@@ -9,6 +9,7 @@ const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET_KEY || 'dev_secret';
 const ACCESS_EXPIRES = '15m';
 const REFRESH_EXPIRES_DAYS = 30;
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
 
 function createAccessToken(user) {
   return jwt.sign({ sub: user.id, email: user.email, name: user.name }, JWT_SECRET, { expiresIn: ACCESS_EXPIRES });
@@ -49,8 +50,8 @@ router.post('/auth/login', async (req, res) => {
 
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: REFRESH_EXPIRES_DAYS * 24 * 60 * 60 * 1000,
       path: '/',
     };
@@ -68,7 +69,7 @@ router.post('/auth/logout', async (req, res) => {
   try {
     const token = req.cookies?.refreshToken || req.body?.refreshToken;
     if (token) await revokeRefreshToken(token);
-    res.clearCookie('refreshToken', { path: '/', sameSite: 'none', secure: process.env.NODE_ENV === 'production' });
+    res.clearCookie('refreshToken', { path: '/', sameSite: isProduction ? 'none' : 'lax', secure: isProduction });
     return res.json({ message: 'Logged out' });
   } catch (err) {
     console.error(err);
